@@ -15,16 +15,18 @@ Expone:
   POST /reset              limpia el estado (teardown de pruebas)
 """
 
-import sys
 import os
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
-
+import sys
 import threading
 import time
 import uuid
+
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+
+import uvicorn
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
-import uvicorn
+
 from config.settings import QUEUE_MOCK_HOST, QUEUE_MOCK_PORT, QUEUE_PROCESSING_DELAY_MS
 
 app = FastAPI(title="Queue Simulator")

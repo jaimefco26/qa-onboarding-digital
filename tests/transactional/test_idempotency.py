@@ -17,12 +17,15 @@ Criterio de aprobacion (bloquea el pipeline si falla):
 Ejecucion: pytest tests/transactional/test_idempotency.py -v
 """
 
-import sys, os
+import os
+import sys
+import uuid
+
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 
-import uuid
 import pytest
 import requests
+
 from config.settings import PAYMENT_MOCK_URL
 
 

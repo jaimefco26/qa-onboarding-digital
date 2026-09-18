@@ -9,9 +9,6 @@ Mapeo con el dominio real:
 Se utiliza fakestoreapi.com como API publica de practica.
 """
 
-import pytest
-
-
 class TestDisponibilidadEquipoPOS:
     """
     Equivalente a: GET /onboarding/catalog y GET /onboarding/catalog/{product_id}
@@ -85,7 +82,7 @@ class TestCarritoNegativo:
         # fakestoreapi puede retornar body vacio (no JSON) o null.
         try:
             body = response.json()
-        except Exception:
+        except ValueError:
             body = None  # Body vacio: no hay producto, comportamiento correcto
 
         assert body is None or (

@@ -19,12 +19,15 @@ Limitaciones documentadas:
 Ejecucion: pytest tests/e2e/ -v
 """
 
-import sys, os
+import os
+import sys
+
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 
 import pytest
 from playwright.sync_api import Page, expect
-from config.settings import E2E_BASE_URL, E2E_USERNAME, E2E_PASSWORD, E2E_HEADLESS
+
+from config.settings import E2E_BASE_URL, E2E_HEADLESS, E2E_PASSWORD, E2E_USERNAME
 
 
 # Datos sinteticos de comercio (nunca datos reales)
@@ -56,10 +59,8 @@ def page(browser_context):
     yield page
     # Limpieza completa: localStorage + sessionStorage + cookies
     # Necesario porque saucedemo persiste el carrito en localStorage
-    try:
-        page.evaluate("window.localStorage.clear(); window.sessionStorage.clear();")
-    except Exception:
-        pass
+    # El try-catch en JS evita excepciones de Python si la pagina ya esta cerrada
+    page.evaluate("() => { try { localStorage.clear(); sessionStorage.clear(); } catch(_) {} }")
     browser_context.clear_cookies()
     page.close()
 

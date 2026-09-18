@@ -16,13 +16,16 @@ para modelar la latencia real de SQS. En CI este valor es bajo (200ms);
 en pruebas de estres puede aumentarse para validar comportamiento bajo carga.
 """
 
-import sys, os
+import os
+import sys
+import time
+import uuid
+
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 
-import uuid
-import time
 import pytest
 import requests
+
 from config.settings import QUEUE_MOCK_URL
 
 

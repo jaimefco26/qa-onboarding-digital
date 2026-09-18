@@ -9,9 +9,6 @@ Se utiliza reqres.in como API publica de practica. Los campos validados
 corresponden a los que el sistema real devolveria en cada operacion.
 """
 
-import pytest
-
-
 # ─── Casos positivos ───────────────────────────────────────────────────────────
 
 class TestCrearTracking:

@@ -1,8 +1,11 @@
-import sys, os
+import os
+import sys
+
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 
 import pytest
 import requests
+
 from config.settings import API_BASE_URL, FAKESTORE_BASE_URL
 
 

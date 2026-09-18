@@ -13,14 +13,16 @@ Expone:
   POST /reset           limpia el estado (usado en teardown de pruebas)
 """
 
-import sys
 import os
+import sys
+import threading
+
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
+import uvicorn
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
-import uvicorn
-import threading
+
 from config.settings import PAYMENT_MOCK_HOST, PAYMENT_MOCK_PORT
 
 app = FastAPI(title="Payment Mock Server")

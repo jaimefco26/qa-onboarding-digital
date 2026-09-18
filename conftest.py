@@ -7,19 +7,22 @@ Cada prueba es responsable de limpiar su propio estado llamando al endpoint
 /reset en el teardown, garantizando independencia y repetibilidad.
 """
 
-import sys
 import os
-sys.path.insert(0, os.path.dirname(__file__))
-
+import sys
 import threading
 import time
+
 import pytest
 import requests
 import uvicorn
 
+sys.path.insert(0, os.path.dirname(__file__))
+
 from config.settings import (
-    PAYMENT_MOCK_HOST, PAYMENT_MOCK_PORT,
-    QUEUE_MOCK_HOST, QUEUE_MOCK_PORT,
+    PAYMENT_MOCK_HOST,
+    PAYMENT_MOCK_PORT,
+    QUEUE_MOCK_HOST,
+    QUEUE_MOCK_PORT,
 )
 
 
@@ -33,7 +36,7 @@ def _start_server(app, host, port):
         try:
             requests.get(f"http://{host}:{port}/counter", timeout=1)
             break
-        except Exception:
+        except (ConnectionError, OSError):
             time.sleep(0.2)
 
 
