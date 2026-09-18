@@ -1,0 +1,239 @@
+name: QA Pipeline — Onboarding Digital
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: [main]
+
+env:
+  # Variables con valores seguros para CI (nunca credenciales reales)
+  API_BASE_URL: https://reqres.in/api
+  FAKESTORE_BASE_URL: https://fakestoreapi.com
+  PAYMENT_MOCK_HOST: "127.0.0.1"
+  PAYMENT_MOCK_PORT: "8001"
+  QUEUE_MOCK_HOST: "127.0.0.1"
+  QUEUE_MOCK_PORT: "8002"
+  QUEUE_PROCESSING_DELAY_MS: "200"
+  E2E_BASE_URL: https://www.saucedemo.com
+  E2E_USERNAME: standard_user
+  E2E_PASSWORD: secret_sauce
+  E2E_HEADLESS: "true"
+
+jobs:
+  # ─── Etapa 1: Analisis estatico y seguridad ──────────────────────────────
+  lint-and-security:
+    name: "Lint + Seguridad"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Instalar dependencias de analisis
+        run: pip install ruff bandit
+
+      - name: Analisis de estilo (ruff)
+        run: ruff check . --output-format=github
+
+      - name: Escaneo de vulnerabilidades de seguridad (bandit)
+        # Excluye tests (datos sinteticos esperados) y reportes
+        run: bandit -r . --exclude ./tests,./reports -ll -f json -o reports/bandit-report.json || true
+
+      - name: Verificar ausencia de credenciales en el codigo
+        # Bloquea si detecta patrones de claves AWS, tokens o contrasenas reales
+        run: |
+          if grep -rE "(AKIA[0-9A-Z]{16}|password\s*=\s*['\"][^'\"]{8,}|secret_key\s*=)" \
+             --include="*.py" --include="*.js" --include="*.yml" \
+             --exclude-dir=".git" .; then
+            echo "ERROR: Se detectaron posibles credenciales en el codigo"
+            exit 1
+          fi
+          echo "Sin credenciales detectadas."
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: security-report
+          path: reports/bandit-report.json
+
+  # ─── Etapa 2: Pruebas de API ─────────────────────────────────────────────
+  api-tests:
+    name: "Pruebas de API"
+    runs-on: ubuntu-latest
+    needs: lint-and-security
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Instalar dependencias
+        run: pip install -r requirements.txt
+
+      - name: Crear directorio de reportes
+        run: mkdir -p reports
+
+      - name: Ejecutar pruebas de API
+        run: |
+          pytest tests/api/ -v \
+            --html=reports/api-report.html \
+            --self-contained-html \
+            -p no:warnings
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: api-test-report
+          path: reports/api-report.html
+
+  # ─── Etapa 3: Prueba transaccional (criterio minimo de aprobacion) ───────
+  transactional-tests:
+    name: "Idempotencia de Pago (BLOQUEO)"
+    runs-on: ubuntu-latest
+    needs: lint-and-security
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Instalar dependencias
+        run: pip install -r requirements.txt
+
+      - name: Crear directorio de reportes
+        run: mkdir -p reports
+
+      - name: Ejecutar prueba de idempotencia
+        # Este job BLOQUEA el pipeline si falla. Es el criterio minimo de aprobacion.
+        run: |
+          pytest tests/transactional/ -v \
+            --html=reports/transactional-report.html \
+            --self-contained-html \
+            -p no:warnings
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: transactional-test-report
+          path: reports/transactional-report.html
+
+  # ─── Etapa 4: Pruebas de asincronismo ───────────────────────────────────
+  async-tests:
+    name: "Asincronismo y Colas"
+    runs-on: ubuntu-latest
+    needs: lint-and-security
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Instalar dependencias
+        run: pip install -r requirements.txt
+
+      - name: Crear directorio de reportes
+        run: mkdir -p reports
+
+      - name: Ejecutar pruebas de asincronismo
+        run: |
+          pytest tests/async_sim/ -v \
+            --html=reports/async-report.html \
+            --self-contained-html \
+            -p no:warnings
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: async-test-report
+          path: reports/async-report.html
+
+  # ─── Etapa 5: Prueba de carga (solo en merge a main) ────────────────────
+  load-test:
+    name: "Carga (k6)"
+    runs-on: ubuntu-latest
+    needs: [api-tests, transactional-tests, async-tests]
+    if: github.ref == 'refs/heads/main' || github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Instalar dependencias Python
+        run: pip install -r requirements.txt
+
+      - name: Instalar k6
+        run: |
+          curl https://github.com/grafana/k6/releases/download/v0.54.0/k6-v0.54.0-linux-amd64.tar.gz \
+            -L -o k6.tar.gz
+          tar -xzf k6.tar.gz
+          sudo mv k6-v0.54.0-linux-amd64/k6 /usr/local/bin/
+
+      - name: Levantar mock de pago
+        run: |
+          mkdir -p reports
+          python mocks/payment_server.py &
+          sleep 3
+
+      - name: Ejecutar escenario de carga
+        # k6 retorna exit code 99 si se superan los umbrales → bloquea el pipeline
+        run: |
+          k6 run \
+            --env TARGET_HOST=http://127.0.0.1:8001 \
+            tests/load/onboarding_load.js
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: load-test-report
+          path: reports/load-summary.json
+
+  # ─── Etapa 6: E2E (solo en merge a main) ────────────────────────────────
+  e2e-tests:
+    name: "E2E Flujo de Onboarding"
+    runs-on: ubuntu-latest
+    needs: [api-tests, transactional-tests, async-tests]
+    if: github.ref == 'refs/heads/main' || github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Instalar dependencias
+        run: pip install -r requirements.txt
+
+      - name: Instalar navegadores Playwright
+        run: playwright install chromium --with-deps
+
+      - name: Crear directorio de reportes
+        run: mkdir -p reports/videos
+
+      - name: Ejecutar pruebas E2E
+        run: |
+          pytest tests/e2e/ -v \
+            --html=reports/e2e-report.html \
+            --self-contained-html \
+            -p no:warnings
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: e2e-test-report
+          path: |
+            reports/e2e-report.html
+            reports/videos/
