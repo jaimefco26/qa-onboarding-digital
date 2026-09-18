@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), "..", ".env"), override=False)
 
 API_BASE_URL = os.getenv("API_BASE_URL", "https://reqres.in/api")
-FAKESTORE_BASE_URL = os.getenv("FAKESTORE_BASE_URL", "https://fakestoreapi.com")
+FAKESTORE_BASE_URL = os.getenv("FAKESTORE_BASE_URL", "https://dummyjson.com")
 
 PAYMENT_MOCK_HOST = os.getenv("PAYMENT_MOCK_HOST", "127.0.0.1")
 PAYMENT_MOCK_PORT = int(os.getenv("PAYMENT_MOCK_PORT", "8001"))

@@ -40,7 +40,7 @@ necesarios para ejecutar las pruebas localmente. **No requiere credenciales real
 | Variable | Valor de ejemplo | Descripcion |
 |---|---|---|
 | `API_BASE_URL` | `https://reqres.in/api` | API publica de practica (tracking) |
-| `FAKESTORE_BASE_URL` | `https://fakestoreapi.com` | API publica de practica (catalogo) |
+| `FAKESTORE_BASE_URL` | `https://dummyjson.com` | API publica de practica (catalogo) |
 | `PAYMENT_MOCK_HOST` | `127.0.0.1` | Host del mock de pago local |
 | `PAYMENT_MOCK_PORT` | `8001` | Puerto del mock de pago local |
 | `QUEUE_MOCK_HOST` | `127.0.0.1` | Host del simulador de cola local |

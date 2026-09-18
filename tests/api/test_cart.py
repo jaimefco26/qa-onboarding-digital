@@ -6,8 +6,12 @@ Mapeo con el dominio real:
   GET /products/{id}   →  Detalle de un equipo: precio, impuestos, disponibilidad
   GET /products/category/{cat}  →  Filtro por linea de equipo (inalambrico, fijo, etc.)
 
-Se utiliza fakestoreapi.com como API publica de practica.
+Se utiliza dummyjson.com como API publica de practica (reemplaza fakestoreapi.com
+que bloquea peticiones desde entornos CI con Cloudflare 403).
+dummyjson.com devuelve los listados bajo la clave "products": {"products": [...]}
+y los productos individuales directamente como objeto JSON.
 """
+
 
 class TestDisponibilidadEquipoPOS:
     """
@@ -20,7 +24,7 @@ class TestDisponibilidadEquipoPOS:
         response = api_session.get(f"{fakestore_url}/products")
 
         assert response.status_code == 200
-        products = response.json()
+        products = response.json().get("products", [])
         assert isinstance(products, list) and len(products) > 0, (
             "El catalogo debe contener al menos un equipo disponible"
         )
@@ -64,32 +68,13 @@ class TestCarritoNegativo:
         """
         Equivalente a seleccionar un equipo POS que fue descontinuado o
         que tiene inventario cero. El sistema no debe retornar datos validos.
-
-        Decision documentada: fakestoreapi.com retorna HTTP 200 con body null
-        para IDs inexistentes (limitacion del mock publico). En el sistema real
-        (API Gateway + Lambda) se esperaria un 404 con mensaje de error.
-        La prueba valida la condicion observable: body nulo o vacio, lo que
-        impediria al frontend mostrar datos de un equipo inexistente.
+        dummyjson.com retorna 404 para IDs inexistentes, que es el comportamiento
+        correcto esperado del sistema real (API Gateway + Lambda).
         """
         response = api_session.get(f"{fakestore_url}/products/99999")
 
-        # fakestoreapi retorna 200 con null; el sistema real retornaria 404.
-        # En ambos casos el body no debe contener un producto valido con precio.
-        if response.status_code in (404, 400):
-            return  # Comportamiento correcto del sistema real
-
-        # Si retorna 200, el body no debe contener campos de producto valido.
-        # fakestoreapi puede retornar body vacio (no JSON) o null.
-        try:
-            body = response.json()
-        except ValueError:
-            body = None  # Body vacio: no hay producto, comportamiento correcto
-
-        assert body is None or (
-            isinstance(body, dict) and "price" not in body
-        ), (
-            f"Un ID inexistente no debe retornar un producto con precio valido. "
-            f"Body: {body}"
+        assert response.status_code in (404, 400), (
+            f"Un ID inexistente debe retornar 404 o 400, se obtuvo {response.status_code}"
         )
 
     def test_categoria_invalida_no_retorna_productos_de_otra_categoria(
@@ -98,12 +83,13 @@ class TestCarritoNegativo:
         """
         Una categoria que no existe no debe devolver productos validos que
         podrian confundir al comercio durante la seleccion del equipo.
+        dummyjson.com retorna 404 para categorias invalidas.
         """
         response = api_session.get(f"{fakestore_url}/products/category/categoria-inexistente-xyz")
 
-        # fakestoreapi devuelve lista vacia para categorias invalidas
         if response.status_code == 200:
-            assert response.json() == [], (
+            products = response.json().get("products", [])
+            assert products == [], (
                 "Una categoria inexistente debe retornar lista vacia, no productos de otra categoria"
             )
         else:
