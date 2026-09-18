@@ -9,7 +9,7 @@ on:
 env:
   # Variables con valores seguros para CI (nunca credenciales reales)
   API_BASE_URL: https://reqres.in/api
-  FAKESTORE_BASE_URL: https://fakestoreapi.com
+  FAKESTORE_BASE_URL: https://dummyjson.com
   PAYMENT_MOCK_HOST: "127.0.0.1"
   PAYMENT_MOCK_PORT: "8001"
   QUEUE_MOCK_HOST: "127.0.0.1"
