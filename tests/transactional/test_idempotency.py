@@ -28,7 +28,6 @@ import requests
 
 from config.settings import PAYMENT_MOCK_URL
 
-
 MERCHANT_TRACKING_ID = f"TRK-{uuid.uuid4().hex[:8].upper()}"
 
 

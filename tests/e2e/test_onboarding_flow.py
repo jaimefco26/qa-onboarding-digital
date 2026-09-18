@@ -29,7 +29,6 @@ from playwright.sync_api import Page, expect
 
 from config.settings import E2E_BASE_URL, E2E_HEADLESS, E2E_PASSWORD, E2E_USERNAME
 
-
 # Datos sinteticos de comercio (nunca datos reales)
 MERCHANT_DATA = {
     "first_name": "Demo",

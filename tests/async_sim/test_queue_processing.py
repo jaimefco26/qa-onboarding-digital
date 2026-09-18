@@ -28,7 +28,6 @@ import requests
 
 from config.settings import QUEUE_MOCK_URL
 
-
 TIMEOUT_SECONDS = 10
 INITIAL_BACKOFF = 0.1
 MAX_BACKOFF = 2.0
