@@ -1,3 +1,8 @@
+"""
+Fixtures compartidas por los tests de API (tracking y carrito).
+La sesion HTTP se reutiliza por modulo para evitar abrir una conexion por test.
+"""
+
 import os
 import sys
 
@@ -11,6 +16,7 @@ from config.settings import API_BASE_URL, FAKESTORE_BASE_URL
 
 @pytest.fixture(scope="module")
 def api_session():
+    # Una sola sesion por modulo: reutiliza keep-alive y cabeceras comunes
     session = requests.Session()
     session.headers.update({"Content-Type": "application/json"})
     yield session

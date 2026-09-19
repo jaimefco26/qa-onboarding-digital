@@ -25,7 +25,7 @@ import sys
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 
 import pytest
-from playwright.sync_api import Page, expect
+from playwright.sync_api import Page, expect, sync_playwright
 
 from config.settings import E2E_BASE_URL, E2E_HEADLESS, E2E_PASSWORD, E2E_USERNAME
 
@@ -38,16 +38,15 @@ MERCHANT_DATA = {
 
 
 def _slow_mo() -> float:
-    """Lee E2E_SLOW_MO (ms entre acciones) desde el entorno; por defecto 0."""
-    import os
     return float(os.getenv("E2E_SLOW_MO", "0"))
 
 
 @pytest.fixture(scope="module")
-def browser_context(playwright):
-    browser = playwright.chromium.launch(headless=E2E_HEADLESS, slow_mo=_slow_mo())
-    context = browser.new_context(viewport={"width": 1280, "height": 720})
-    yield context
+def browser_context():
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=E2E_HEADLESS, slow_mo=_slow_mo())
+        context = browser.new_context(viewport={"width": 1280, "height": 720})
+        yield context
     context.close()
     browser.close()
 
